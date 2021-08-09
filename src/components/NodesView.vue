@@ -173,6 +173,7 @@ export default {
         url: '/nodetree/' + addresses,
         method: 'get',
       })
+      this.pathTree = [];
       this.pathTree.push(res.data.data);
     },
     async node_query() {

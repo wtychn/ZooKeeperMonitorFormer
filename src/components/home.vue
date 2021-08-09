@@ -5,7 +5,7 @@
       <el-main>
         <el-form ref="form" label-width="150px" style="width: 400px">
 
-          <el-form-item label="监控节点(例子：127.0.0.1：8001,127.0.0.1:8002)" label-width="100px">
+          <el-form-item label="监控集群" label-width="200px">
             <el-input v-model="addresses"></el-input>
           </el-form-item>
 
