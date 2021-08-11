@@ -159,7 +159,7 @@ export default {
       const redata = e.data;
       console.log(redata)
       if (redata === "Rec Success!") {
-        alert("检测数据更新,同步中...")
+        // alert("检测数据更新,同步中...")
         this.getPathStruct(this.addresses);
       }
     },
@@ -184,7 +184,7 @@ export default {
           path: this.absolutePath
         }
       })
-      if (res.data.code !== 200) {
+      if (res.data.stat !== 200) {
         alert("节点不存在!,查询失败")
       } else {
         let queryData = res.data.data;
@@ -245,7 +245,7 @@ export default {
         }
       });
       let ob = res.data;
-      if (ob.code !== 200) {
+      if (ob.stat !== 200) {
         this.$message.error('创建失败,节点已存在!');
       } else {
         // await this.getPathStruct();
@@ -274,7 +274,7 @@ export default {
         }
       });
       let ob = res.data;
-      if (ob.code !== 200) {
+      if (ob.stat !== 200) {
         this.$message.error('创建失败,节点不存在!');
       } else {
         // await this.getPathStruct();
@@ -293,7 +293,7 @@ export default {
         }
       });
       let ob = res.data;
-      if (ob.code !== 200) {
+      if (ob.stat !== 200) {
         this.$message.error('删除失败,节点不存在!');
       } else {
         // await this.getPathStruct();
