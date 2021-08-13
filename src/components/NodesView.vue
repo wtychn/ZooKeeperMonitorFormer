@@ -24,6 +24,23 @@
         <el-col :span="14">
           <div class="grid-content bg-purple-light">
             <el-card class="box-card">
+
+              <el-form :inline="true" :model="formInline" class="demo-form-inline">
+
+                <el-form-item label-width="200px">
+                  <el-input v-model="absolutePath" placeholder="请输入节点路径"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                  <el-button type="primary" @click="node_query">搜索节点</el-button>
+                </el-form-item>
+
+                <el-form-item>
+                  <el-button type="primary" @click="quit">退出登录</el-button>
+                </el-form-item>
+
+              </el-form>
+
               <div slot="header" class="clearfix">
                 <span>节点信息</span>
               </div>
@@ -60,6 +77,42 @@
                         <el-button type="danger" icon="el-icon-delete" circle size="mini" @click="delNode"></el-button>
                       </el-tooltip>
                     </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </el-card>
+          </div>
+
+          <div>
+            <el-card class="box-card">
+              <div slot="header" class="clearfix">
+                <span>服务信息</span>
+                <el-row>
+                  <el-col :span="2">
+                    <el-button size="mini" @click="getServerInfo">刷新</el-button>
+                  </el-col>
+                </el-row>
+              </div>
+              <div class="text item">
+                <el-table
+                    :data="serverInfo"
+                    stripe border
+                    style="width: 95%">
+                  <el-table-column
+                      prop="host"
+                      label="Host">
+                  </el-table-column>
+                  <el-table-column
+                      prop="port"
+                      label="Port">
+                  </el-table-column>
+                  <el-table-column
+                      prop="mode"
+                      label="Mode">
+                  </el-table-column>
+                  <el-table-column
+                      prop="status"
+                      label="Status">
                   </el-table-column>
                 </el-table>
               </div>
@@ -106,6 +159,7 @@
 import {request} from "@/network/request"
 import qs from "qs"
 import Vue from "vue";
+
 Vue.prototype.$qs = qs
 
 export default {
@@ -131,17 +185,26 @@ export default {
       /*Tree控件属性*/
       defaultProps: {
         children: 'children',
-        label: 'label'
+        label: 'label',
+        path: ''
       },
       node: [{
         path: 'NULL',
         value: 'NULL'
+      }],
+      /*服务信息Table属性*/
+      serverInfo: [{
+        id: '',
+        mode: '',
+        status: '',
+        host: '',
+        port: ''
       }]
     }
   },
 
   methods: {
-    initWebSocket(){ //初始化weosocket
+    initWebSocket() { //初始化weosocket
       const wsuri = "ws://localhost:8081/webSocket";
       this.websock = new WebSocket(wsuri);
       this.websock.onmessage = this.websocketonmessage;
@@ -149,23 +212,27 @@ export default {
       this.websock.onerror = this.websocketonerror;
       this.websock.onclose = this.websocketclose;
     },
-    websocketonopen(){ //连接建立之后执行send方法发送数据
+    websocketonopen() { //连接建立之后执行send方法发送数据
       console.log("连接成功!");
     },
-    websocketonerror(){//连接建立失败重连
+    websocketonerror() {//连接建立失败重连
       this.initWebSocket();
     },
-    websocketonmessage(e) { //数据接收
+    async websocketonmessage(e) { //数据接收
       const redata = e.data;
       console.log(redata)
       if (redata === "Rec Success!") {
         // alert("检测数据更新,同步中...")
-        this.getPathStruct(this.addresses);
+        await this.getPathStruct(this.addresses);
+      } else if (redata === "ServerStatChanged") {
+        this.$message.info("检测到服务器状态更改,刷新服务器状态...");
+        await this.getServerInfo();
+        this.$message.success("刷新完成");
       }
     },
 
-    websocketclose(e){  //关闭
-      console.log('断开连接',e);
+    websocketclose(e) {  //关闭
+      console.log('断开连接', e);
     },
 
     async getPathStruct(addresses) {
@@ -197,8 +264,8 @@ export default {
     },
     /*Tree控件中节点点击事件*/
     nodeClick(data) {
-      this.absolutePath = data.label;
-      this.node[0].path = data.label;
+      this.absolutePath = data.path;
+      this.node[0].path = data.path;
       this.node_query();//查询值
       // this.node_getChild();//查询子节点
       // this.dialogVisible=true;//弹出对话框
@@ -331,10 +398,29 @@ export default {
       await this.node_delete();
     },
 
+    async getServerInfo() {
+      const res = await request({
+        url: '/servers',
+        method: 'get',
+      })
+      console.log(res);
+      this.serverInfo = res.data.data;
+    },
+
+    quit() {
+      request({
+        url: '/quit',
+        method: 'delete',
+      })
+      this.$router.push({
+        path: `/`,
+      })
+    }
   },
   created() {
     this.addresses = this.$route.query.addresses;
     this.getPathStruct(this.addresses);
+    this.getServerInfo();
     this.initWebSocket();
   }
 
