@@ -89,13 +89,13 @@
                 <span>服务信息</span>
                 <el-row>
                   <el-col :span="2">
-                    <el-button size="mini" @click="getServerInfo">刷新</el-button>
+                    <el-button size="mini" @click="getServers">刷新</el-button>
                   </el-col>
                 </el-row>
               </div>
               <div class="text item">
                 <el-table
-                    :data="serverInfo"
+                    :data="partInfo"
                     stripe border
                     style="width: 95%">
                   <el-table-column
@@ -115,6 +115,14 @@
                       label="Status">
                   </el-table-column>
                 </el-table>
+                <el-pagination
+                    background
+                    layout="prev, pager, next, jumper"
+                    @current-change="handleCurrentChange"
+                    :current-page="currentPage"
+                    :page-size="5"
+                    :total="serverInfo.length / 5 + 1">
+                </el-pagination>
               </div>
             </el-card>
           </div>
@@ -128,11 +136,21 @@
         title="提示"
         :visible.sync="addDialogVisible"
         :before-close="addDialogClose"
-        width="30%">
-      <span>名称</span>
-      <el-input v-model="newNodePath"></el-input>
-      <span>值</span>
-      <el-input v-model="newNodeValue"></el-input>
+        width="40%">
+        <el-row>
+          <el-col :span="6" style="line-height:1.7;font-size: 16px">节点路径:</el-col>
+          <el-col :span="18">
+            <el-input v-model="newNodePath">
+              <template slot="prepend">{{this.absolutePath}}/</template>
+            </el-input>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="6" style="line-height:1.7;font-size: 16px">节点值:</el-col>
+          <el-col :span="18">
+            <el-input v-model="newNodeValue"></el-input>
+          </el-col>
+        </el-row>
       <span slot="footer" class="dialog-footer">
             <el-button @click="addDialogVisible = false">取 消</el-button>
             <el-button type="primary" @click="node_create">确 定</el-button>
@@ -143,9 +161,25 @@
         title="提示"
         :visible.sync="updateDialogVisible"
         :before-close="updateDialogClose"
-        width="30%">
-      <span>值</span>
-      <el-input v-model="newNodeValue"></el-input>
+        width="40%">
+      <el-row>
+        <el-col :span="6" style="line-height:1.7;font-size: 16px">节点路径:</el-col>
+        <el-col :span="18" style="line-height:1.7;font-size: 16px">
+          {{this.absolutePath}}
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="6" style="line-height:1.7;font-size: 16px">原节点值:</el-col>
+        <el-col :span="18" style="line-height:1.7;font-size: 16px">
+          {{node[0].value}}
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="6" style="line-height:1.7;font-size: 16px">修改节点:</el-col>
+        <el-col :span="18">
+          <el-input v-model="newNodeValue" placeholder="请输入修改值"></el-input>
+        </el-col>
+      </el-row>
       <span slot="footer" class="dialog-footer">
             <el-button @click="updateDialogVisible = false">取 消</el-button>
             <el-button type="primary" @click="node_update">确 定</el-button>
@@ -199,7 +233,16 @@ export default {
         status: '',
         host: '',
         port: ''
-      }]
+      }],
+      partInfo: [{
+        id: '',
+        mode: '',
+        status: '',
+        host: '',
+        port: ''
+      }],
+      // 分页中的当前页数
+      currentPage: 1
     }
   },
 
@@ -226,7 +269,7 @@ export default {
         await this.getPathStruct(this.addresses);
       } else if (redata === "ServerStatChanged") {
         this.$message.info("检测到服务器状态更改,刷新服务器状态...");
-        await this.getServerInfo();
+        await this.getServers();
         this.$message.success("刷新完成");
       }
     },
@@ -313,7 +356,8 @@ export default {
       });
       let ob = res.data;
       if (ob.stat !== 200) {
-        this.$message.error('创建失败,节点已存在!');
+        if(ob.stat === 401) this.$message.error('没有修改权限！');
+        else this.$message.error('创建失败,节点不存在!');
       } else {
         // await this.getPathStruct();
         // await this.node_getChild();
@@ -342,7 +386,8 @@ export default {
       });
       let ob = res.data;
       if (ob.stat !== 200) {
-        this.$message.error('创建失败,节点不存在!');
+        if(ob.stat === 401) this.$message.error('没有修改权限！');
+        else this.$message.error('修改失败,节点不存在!');
       } else {
         // await this.getPathStruct();
         // await this.node_query();
@@ -361,7 +406,8 @@ export default {
       });
       let ob = res.data;
       if (ob.stat !== 200) {
-        this.$message.error('删除失败,节点不存在!');
+        if(ob.stat === 401) this.$message.error('没有修改权限！');
+        else this.$message.error('删除失败,节点不存在!');
       } else {
         // await this.getPathStruct();
         this.node[0].nodeChildren = "NULL";
@@ -398,14 +444,14 @@ export default {
       await this.node_delete();
     },
 
-    async getServerInfo() {
-      const res = await request({
-        url: '/servers',
-        method: 'get',
-      })
-      console.log(res);
-      this.serverInfo = res.data.data;
-    },
+    // async getServerInfo() {
+    //   const res = await request({
+    //     url: '/servers',
+    //     method: 'get',
+    //   })
+    //   console.log(res);
+    //   this.serverInfo = res.data.data;
+    // },
 
     quit() {
       request({
@@ -415,12 +461,37 @@ export default {
       this.$router.push({
         path: `/`,
       })
+    },
+
+    async handleCurrentChange(val) {
+      this.currentPage = val;
+      const res = await request({
+        url: '/servers',
+        method: 'get',
+        params: {
+          page: this.currentPage,
+          pageSize: 5
+        }
+      })
+      this.partInfo = res.data.data;
+    },
+
+    async getServers() {
+      const res = await request({
+        url: '/servers',
+        method: 'get',
+        params: {
+          page: this.currentPage,
+          pageSize: 5
+        }
+      })
+      this.partInfo = res.data.data;
     }
   },
   created() {
     this.addresses = this.$route.query.addresses;
     this.getPathStruct(this.addresses);
-    this.getServerInfo();
+    this.handleCurrentChange(1);
     this.initWebSocket();
   }
 
