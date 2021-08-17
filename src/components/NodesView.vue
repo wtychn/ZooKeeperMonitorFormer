@@ -329,13 +329,19 @@ export default {
       }
     },
     async node_create() {
+      const pattern = /^\w+$/g;
+      const flag = pattern.test(this.newNodePath);
+      if (!flag) {
+        this.$message.error('节点名仅支持数字、字母、下划线!');
+        return;
+      }
+
       let abPath = '';
       if (this.absolutePath === '/') {
         abPath = this.absolutePath + this.newNodePath;
       } else {
         abPath = this.absolutePath + '/' + this.newNodePath;
       }
-
       const res = await request({
         url: '/node',
         method: 'post',
