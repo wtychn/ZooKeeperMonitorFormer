@@ -47,7 +47,6 @@
               <div class="text item">
                 <el-table
                     :data="node"
-                    stripe border
                     style="width: 95%">
                   <el-table-column
                       prop="path"
@@ -96,8 +95,8 @@
               <div class="text item">
                 <el-table
                     :data="partInfo"
-                    stripe border
-                    style="width: 95%">
+                    style="width: 95%"
+                    :row-class-name="tableRowClassName">
                   <el-table-column
                       prop="host"
                       label="Host">
@@ -266,10 +265,10 @@ export default {
       console.log(redata)
       if (redata === "Rec Success!") {
         // alert("检测数据更新,同步中...")
-        await this.getPathStruct(this.addresses);
+        await this.getPathStruct();
       } else if (redata === "ServerStatChanged") {
         this.$message.info("检测到服务器状态更改,刷新服务器状态...");
-        await this.getServers();
+        await this.handleCurrentChange(this.currentPage);
         this.$message.success("刷新完成");
       }
     },
@@ -278,9 +277,18 @@ export default {
       console.log('断开连接', e);
     },
 
-    async getPathStruct(addresses) {
+    tableRowClassName({row}) {
+      if (row.status === 'DisConnected') {
+        return 'warning-row';
+      } else if (row.status === 'Connected') {
+        return 'success-row';
+      }
+      return '';
+    },
+
+    async getPathStruct() {
       const res = await request({
-        url: '/nodetree/' + addresses,
+        url: '/nodetree',
         method: 'get',
       })
       this.pathTree = [];
@@ -482,22 +490,18 @@ export default {
       this.partInfo = res.data.data;
     },
 
-    async getServers() {
-      const res = await request({
-        url: '/servers',
+    async getAllServers(addresses) {
+      await request({
+        url: '/allServers/' + addresses,
         method: 'get',
-        params: {
-          page: this.currentPage,
-          pageSize: 5
-        }
       })
-      this.partInfo = res.data.data;
     }
   },
   created() {
     this.addresses = this.$route.query.addresses;
-    this.getPathStruct(this.addresses);
+    this.getAllServers(this.addresses);
     this.handleCurrentChange(1);
+    this.getPathStruct();
     this.initWebSocket();
   }
 
@@ -527,4 +531,14 @@ export default {
   /*text-align: center;*/
   /*line-height: 160px;*/
 }
+
+
+ .el-table .warning-row {
+   background: oldlace;
+ }
+
+.el-table .success-row {
+  background: #f0f9eb;
+}
+
 </style>
