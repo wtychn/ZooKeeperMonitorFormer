@@ -116,11 +116,13 @@
                 </el-table>
                 <el-pagination
                     background
-                    layout="prev, pager, next, jumper"
+                    layout="total, sizes, prev, pager, next, jumper"
                     @current-change="handleCurrentChange"
+                    @size-change="handleSizeChange"
                     :current-page="currentPage"
-                    :page-size="5"
-                    :total="serverInfo.length / 5 + 1">
+                    :page-size="currentSize"
+                    :page-sizes="[1, 5, 10, 50]"
+                    :total="serverInfo.length">
                 </el-pagination>
               </div>
             </el-card>
@@ -241,7 +243,8 @@ export default {
         port: ''
       }],
       // 分页中的当前页数
-      currentPage: 1
+      currentPage: 1,
+      currentSize: 1
     }
   },
 
@@ -458,15 +461,6 @@ export default {
       await this.node_delete();
     },
 
-    // async getServerInfo() {
-    //   const res = await request({
-    //     url: '/servers',
-    //     method: 'get',
-    //   })
-    //   console.log(res);
-    //   this.serverInfo = res.data.data;
-    // },
-
     quit() {
       request({
         url: '/quit',
@@ -484,25 +478,35 @@ export default {
         method: 'get',
         params: {
           page: this.currentPage,
-          pageSize: 5
+          pageSize: this.currentSize
         }
       })
       this.partInfo = res.data.data;
     },
 
+    handleSizeChange(val) {
+      this.currentSize = val;
+      this.handleCurrentChange(this.currentPage);
+    },
+
     async getAllServers(addresses) {
-      await request({
+      const res = await request({
         url: '/allServers/' + addresses,
         method: 'get',
       })
+      this.serverInfo = res.data.data;
+    },
+
+    async initial() {
+      await this.getAllServers(this.addresses);
+      await this.handleCurrentChange(1);
+      await this.getPathStruct();
+      await this.initWebSocket();
     }
   },
   created() {
     this.addresses = this.$route.query.addresses;
-    this.getAllServers(this.addresses);
-    this.handleCurrentChange(1);
-    this.getPathStruct();
-    this.initWebSocket();
+    this.initial();
   }
 
 };
