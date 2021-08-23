@@ -88,7 +88,7 @@
                 <span>服务信息</span>
                 <el-row>
                   <el-col :span="2">
-                    <el-button size="mini" @click="getServers">刷新</el-button>
+                    <el-button size="mini" @click="getCurrentPage">刷新</el-button>
                   </el-col>
                 </el-row>
               </div>
@@ -484,6 +484,10 @@ export default {
       this.partInfo = res.data.data;
     },
 
+    async getCurrentPage(){
+      await this.handleCurrentChange(this.currentPage);
+    },
+
     handleSizeChange(val) {
       this.currentSize = val;
       this.handleCurrentChange(this.currentPage);
@@ -491,8 +495,11 @@ export default {
 
     async getAllServers(addresses) {
       const res = await request({
-        url: '/allServers/' + addresses,
+        url: '/allServers',
         method: 'get',
+        params: {
+          addresses: addresses
+        }
       })
       this.serverInfo = res.data.data;
     },
